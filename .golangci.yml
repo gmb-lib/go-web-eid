@@ -1,0 +1,63 @@
+# golangci-lint configuration (v2 schema).
+# Run: golangci-lint run ./...
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - bodyclose      # HTTP response bodies are closed (OCSP/JWKS clients)
+    - errcheck       # unchecked errors
+    - errorlint      # correct error wrapping / comparisons
+    - gocritic       # opinionated correctness/style checks
+    - gosec          # security issues (crypto, file I/O)
+    - govet          # vet
+    - ineffassign    # ineffectual assignments
+    - misspell       # spelling
+    - nakedret       # no naked returns in long funcs
+    - prealloc       # slice preallocation
+    - revive         # style / exported-symbol docs
+    - staticcheck    # staticcheck + gosimple + stylecheck
+    - unconvert      # unnecessary conversions
+    - unparam        # unused function parameters
+    - unused         # unused code
+  settings:
+    gosec:
+      # G115: integer overflow on conversions. False-positives on the fixed-width
+      # curve/coordinate byte math in the signature/assertion packages.
+      excludes:
+        - G115
+    revive:
+      rules:
+        - name: exported
+        - name: var-naming
+        - name: package-comments
+        - name: error-strings
+        - name: context-as-argument
+  exclusions:
+    generated: lax
+    rules:
+      # Tests may ignore errors and use less-constrained constructs.
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
+          - unparam
+          - prealloc
+          - bodyclose
+      # The OCSP HTTP client owns response-body lifecycle internally.
+      - path: ocsp/client\.go
+        linters:
+          - bodyclose
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/gmb-lib/go-web-eid
