@@ -83,7 +83,7 @@ type Claims struct {
 	GivenName   string `json:"given_name,omitempty"`
 	FamilyName  string `json:"family_name,omitempty"`
 	LoA         string `json:"loa"`
-	LoginMethod string `json:"login_method"` // always "eid"
+	LoginMethod string `json:"login_method"` // always "webEid"
 }
 
 // jwsHeader is the protected JWS header.
@@ -197,7 +197,7 @@ func (i *Issuer) Issue(s Subject) (string, error) {
 		GivenName:   s.GivenName,
 		FamilyName:  s.FamilyName,
 		LoA:         s.LoA,
-		LoginMethod: "eid",
+		LoginMethod: "webEid",
 	}
 	return sign(i.key, claims)
 }
