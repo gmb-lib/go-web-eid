@@ -38,7 +38,7 @@ func TestIssueVerifyRoundTrip(t *testing.T) {
 	qt.Check(t, qt.Equals(claims.NationalID, "PNOLV-XXXXXXXXXXX"))
 	qt.Check(t, qt.Equals(claims.Subject, "PNOLV-XXXXXXXXXXX"))
 	qt.Check(t, qt.Equals(claims.LoA, "high"))
-	qt.Check(t, qt.Equals(claims.LoginMethod, "eid"))
+	qt.Check(t, qt.Equals(claims.LoginMethod, "webEid"))
 	qt.Check(t, qt.Not(qt.Equals(claims.JWTID, "")))
 }
 
