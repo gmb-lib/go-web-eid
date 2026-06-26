@@ -32,7 +32,7 @@ type AuthTokenValidator interface {
 
 // authTokenValidator is the default AuthTokenValidator.
 type authTokenValidator struct {
-	origin             string
+	origins            []string
 	trust              *certificate.TrustStore
 	ocspEnabled        bool
 	ocspChecker        *ocsp.Checker
@@ -110,19 +110,29 @@ func (v *authTokenValidator) verifySignature(token *AuthToken, cert *x509.Certif
 		return exceptions.ErrTokenSignatureInvalid
 	}
 
-	originHasher := h.New()
-	originHasher.Write([]byte(v.origin))
-	signedData := originHasher.Sum(nil)
-
-	nonceHasher := h.New()
-	nonceHasher.Write([]byte(challengeNonce))
-	signedData = append(signedData, nonceHasher.Sum(nil)...)
-
 	sig, err := token.decodeSignature()
 	if err != nil {
 		return err
 	}
-	return signature.Verify(cert, token.Algorithm, signedData, sig)
+
+	nonceHasher := h.New()
+	nonceHasher.Write([]byte(challengeNonce))
+	nonceHash := nonceHasher.Sum(nil)
+
+	// The origin is bound into the signed value, so the token verifies against
+	// whichever configured origin the browser actually used. Try each and accept
+	// on the first match — a deployment may be fronted at more than one origin.
+	for _, origin := range v.origins {
+		originHasher := h.New()
+		originHasher.Write([]byte(origin))
+		signedData := append(originHasher.Sum(nil), nonceHash...)
+
+		if err := signature.Verify(cert, token.Algorithm, signedData, sig); err == nil {
+			return nil
+		}
+	}
+
+	return exceptions.ErrTokenSignatureInvalid
 }
 
 // normalizeOrigin validates and canonicalises a site origin: scheme://host[:port]

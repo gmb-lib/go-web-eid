@@ -132,6 +132,34 @@ func TestValidateRejectsWrongOrigin(t *testing.T) {
 	qt.Check(t, qt.IsNotNil(err))
 }
 
+func TestValidateAcceptsAnyConfiguredOrigin(t *testing.T) {
+	pki := newTestPKI(t)
+	const secondOrigin = "https://localhost:5011"
+	const nonce = "dGVzdC1ub25jZS13aXRoLWVub3VnaC1lbnRyb3B5LWZvci10ZXN0cw=="
+
+	v, err := NewAuthTokenValidatorBuilder().
+		WithSiteOrigins(testOrigin, secondOrigin).
+		WithTrustedCertificateAuthorities(pki.caCert).
+		WithoutUserCertificateRevocationCheckWithOcsp().
+		Build()
+	qt.Assert(t, qt.IsNil(err))
+
+	// A token signed for the second configured origin verifies.
+	tok := pki.signedToken(t, secondOrigin, nonce)
+	_, err = v.Validate(context.Background(), tok, nonce)
+	qt.Check(t, qt.IsNil(err))
+
+	// As does one signed for the first configured origin.
+	tok = pki.signedToken(t, testOrigin, nonce)
+	_, err = v.Validate(context.Background(), tok, nonce)
+	qt.Check(t, qt.IsNil(err))
+
+	// An origin that is not configured is still rejected.
+	tok = pki.signedToken(t, "https://evil.example", nonce)
+	_, err = v.Validate(context.Background(), tok, nonce)
+	qt.Check(t, qt.IsNotNil(err))
+}
+
 func TestValidateRejectsUntrustedCertificate(t *testing.T) {
 	pki := newTestPKI(t)
 	other := newTestPKI(t)
