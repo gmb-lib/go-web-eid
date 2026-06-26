@@ -12,7 +12,7 @@ import (
 // AuthTokenValidatorBuilder builds an AuthTokenValidator. It mirrors the Java
 // AuthTokenValidatorBuilder so existing RIA documentation maps onto it.
 type AuthTokenValidatorBuilder struct {
-	origin                 string
+	origins                []string
 	allowInsecureLocalhost bool
 
 	trustedCAs []*x509.Certificate
@@ -44,10 +44,18 @@ func NewAuthTokenValidatorBuilder() *AuthTokenValidatorBuilder {
 	}
 }
 
-// WithSiteOrigin sets the origin the token is bound to, in the form
-// https://host[:port] with no trailing slash (required).
+// WithSiteOrigin adds an origin the token may be bound to, in the form
+// https://host[:port] with no trailing slash. At least one origin is required;
+// call this more than once (or use WithSiteOrigins) to accept several.
 func (b *AuthTokenValidatorBuilder) WithSiteOrigin(origin string) *AuthTokenValidatorBuilder {
-	b.origin = origin
+	b.origins = append(b.origins, origin)
+	return b
+}
+
+// WithSiteOrigins adds one or more accepted origins (see WithSiteOrigin). Useful
+// when the same engine validates tokens from more than one front-end origin.
+func (b *AuthTokenValidatorBuilder) WithSiteOrigins(origins ...string) *AuthTokenValidatorBuilder {
+	b.origins = append(b.origins, origins...)
 	return b
 }
 
@@ -131,12 +139,16 @@ func (b *AuthTokenValidatorBuilder) WithMaxOcspResponseThisUpdateAge(d time.Dura
 
 // Build validates configuration and constructs the validator.
 func (b *AuthTokenValidatorBuilder) Build() (AuthTokenValidator, error) {
-	if b.origin == "" {
+	if len(b.origins) == 0 {
 		return nil, errOriginRequired
 	}
-	normalizedOrigin, err := normalizeOrigin(b.origin, b.allowInsecureLocalhost)
-	if err != nil {
-		return nil, err
+	normalizedOrigins := make([]string, 0, len(b.origins))
+	for _, o := range b.origins {
+		n, err := normalizeOrigin(o, b.allowInsecureLocalhost)
+		if err != nil {
+			return nil, err
+		}
+		normalizedOrigins = append(normalizedOrigins, n)
 	}
 	trust, err := certificate.NewTrustStore(b.trustedCAs...)
 	if err != nil {
@@ -144,7 +156,7 @@ func (b *AuthTokenValidatorBuilder) Build() (AuthTokenValidator, error) {
 	}
 
 	v := &authTokenValidator{
-		origin:             normalizedOrigin,
+		origins:            normalizedOrigins,
 		trust:              trust,
 		ocspEnabled:        b.ocspEnabled,
 		disallowedPolicies: b.disallowedPolicies,
