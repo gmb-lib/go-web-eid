@@ -26,7 +26,7 @@ func TestConfigurationValidate(t *testing.T) {
 	valid := validation.New()
 
 	good := &Configuration{
-		Origin:                "https://example.org",
+		Origins:               []string{"https://example.org"},
 		TrustedCACertsPath:    "/etc/webeid/ca.pem",
 		NonceTTL:              5 * time.Minute,
 		OCSPRequestTimeout:    5 * time.Second,
@@ -36,8 +36,12 @@ func TestConfigurationValidate(t *testing.T) {
 	qt.Check(t, qt.IsNil(good.Validate(valid)))
 
 	missingOrigin := *good
-	missingOrigin.Origin = ""
+	missingOrigin.Origins = nil
 	qt.Check(t, qt.IsNotNil(missingOrigin.Validate(valid)))
+
+	multiOrigin := *good
+	multiOrigin.Origins = []string{"https://example.org", "https://localhost:5011"}
+	qt.Check(t, qt.IsNil(multiOrigin.Validate(valid)))
 
 	badHash := *good
 	badHash.SigningHashPreference = []string{"MD5"}

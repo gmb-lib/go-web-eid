@@ -38,11 +38,11 @@ const sessionIDBytes = 32
 func EnsureSession(cfg *Configuration) azugo.RequestHandlerFunc {
 	cookieName := cfg.SessionCookieName
 	ttl := cfg.NonceTTL
-	originHost := originHostname(cfg.Origin)
-	enforceHost := cfg.EnforceHostHeader && originHost != ""
+	originHosts := originHostnames(cfg.Origins)
+	enforceHost := cfg.EnforceHostHeader && len(originHosts) > 0
 	return func(next azugo.RequestHandler) azugo.RequestHandler {
 		return func(ctx *azugo.Context) {
-			if enforceHost && !hostMatches(string(ctx.Request().Header.Host()), originHost) {
+			if enforceHost && !hostMatchesAny(string(ctx.Request().Header.Host()), originHosts) {
 				ctx.Error(errHostMismatch)
 				return
 			}
@@ -73,6 +73,28 @@ func (*hostMismatchError) SafeError() string {
 	return "request host does not match the configured origin"
 }
 func (*hostMismatchError) StatusCode() int { return 400 }
+
+// originHostnames extracts the lower-cased hostnames from the configured origins,
+// skipping any that cannot be parsed.
+func originHostnames(origins []string) []string {
+	hosts := make([]string, 0, len(origins))
+	for _, o := range origins {
+		if h := originHostname(o); h != "" {
+			hosts = append(hosts, h)
+		}
+	}
+	return hosts
+}
+
+// hostMatchesAny reports whether the request Host matches any configured origin host.
+func hostMatchesAny(requestHost string, originHosts []string) bool {
+	for _, oh := range originHosts {
+		if hostMatches(requestHost, oh) {
+			return true
+		}
+	}
+	return false
+}
 
 // originHostname extracts the lower-cased hostname (without port) from the
 // configured origin; "" when it cannot be parsed.

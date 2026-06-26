@@ -109,7 +109,7 @@ func (p *azugoPKI) signToken(t *testing.T, origin, nonce string) webeid.AuthToke
 func testConfig(t *testing.T, caPath string) *Configuration {
 	t.Helper()
 	return &Configuration{
-		Origin:                testOrigin,
+		Origins:               []string{testOrigin},
 		TrustedCACertsPath:    caPath,
 		NonceTTL:              5 * time.Minute,
 		OCSPEnabled:           false,
