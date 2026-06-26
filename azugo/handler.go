@@ -159,7 +159,7 @@ func New(cfg *Configuration, opts ...Option) (*Handler, error) {
 // buildValidator constructs the auth-token validator from configuration.
 func buildValidator(cfg *Configuration, cas []*x509.Certificate) (webeid.AuthTokenValidator, error) {
 	b := webeid.NewAuthTokenValidatorBuilder().
-		WithSiteOrigin(cfg.Origin).
+		WithSiteOrigins(cfg.Origins...).
 		WithTrustedCertificateAuthorities(cas...).
 		WithOcspRequestTimeout(cfg.OCSPRequestTimeout).
 		WithNonceDisabledOcspUrls(cfg.OCSPNonceDisabledURLs...).

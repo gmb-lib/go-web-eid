@@ -14,8 +14,11 @@ import (
 // Configuration holds the Web eID settings for an Azugo deployment. It follows
 // the Azugo sub-package configuration pattern (own Bind/Validate).
 type Configuration struct {
-	// Origin is the site origin the token is bound to, https://host[:port].
-	Origin string `mapstructure:"origin" validate:"required,url"`
+	// Origins are the site origins a token may be bound to, each https://host[:port].
+	// Usually one; supply several (comma-separated in WEBEID_ORIGIN) when the same
+	// engine validates tokens from more than one front-end origin. A token verifies
+	// against whichever listed origin the browser actually used.
+	Origins []string `mapstructure:"origins" validate:"required,min=1,dive,url"`
 	// TrustedCACertsPath is a directory or file containing intermediate CA certs.
 	TrustedCACertsPath string `mapstructure:"trusted_ca_certs_path" validate:"required"`
 	// NonceTTL is the challenge-nonce lifetime.
@@ -68,7 +71,7 @@ func (c *Configuration) Bind(prefix string, v *viper.Viper) {
 	v.SetDefault(prefix+".allow_insecure_localhost", false)
 	v.SetDefault(prefix+".enforce_host_header", true)
 
-	_ = v.BindEnv(prefix+".origin", "WEBEID_ORIGIN")
+	_ = v.BindEnv(prefix+".origins", "WEBEID_ORIGIN")
 	_ = v.BindEnv(prefix+".trusted_ca_certs_path", "WEBEID_TRUSTED_CA_CERTS_PATH")
 	_ = v.BindEnv(prefix+".nonce_ttl", "WEBEID_NONCE_TTL")
 	_ = v.BindEnv(prefix+".ocsp_enabled", "WEBEID_OCSP_ENABLED")
