@@ -147,7 +147,7 @@ func normalizeOrigin(origin string, allowInsecureLocalhost bool) (string, error)
 		return "", errors.Join(errOriginRequired, err)
 	}
 	if u.Scheme != "https" {
-		if !(allowInsecureLocalhost && u.Scheme == "http" && isLoopbackHost(u.Hostname())) {
+		if !allowInsecureLocalhost || u.Scheme != "http" || !isLoopbackHost(u.Hostname()) {
 			return "", errors.New("site origin must use https")
 		}
 	}

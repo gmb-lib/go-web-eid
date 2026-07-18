@@ -31,7 +31,7 @@ func TestParse_ToleratesUnknownFields(t *testing.T) {
 // weaken the structural checks.
 func TestParse_StillRejectsBadStructure(t *testing.T) {
 	cases := []string{
-		`{"algorithm":"ES384","signature":"c2ln","format":"web-eid:1.0"}`,              // missing certificate
+		`{"algorithm":"ES384","signature":"c2ln","format":"web-eid:1.0"}`,                                // missing certificate
 		`{"unverifiedCertificate":"QUJD","algorithm":"XX999","signature":"c2ln","format":"web-eid:1.0"}`, // unknown algorithm
 		`{"unverifiedCertificate":"QUJD","algorithm":"ES384","signature":"c2ln","format":"web-eid:2.0"}`, // unsupported major
 	}
@@ -46,10 +46,10 @@ func TestParse_StillRejectsBadStructure(t *testing.T) {
 // localhost allowance (W-2).
 func TestNormalizeOrigin_InsecureLocalhost(t *testing.T) {
 	cases := []struct {
-		origin    string
-		allowDev  bool
-		wantErr   bool
-		want      string
+		origin   string
+		allowDev bool
+		wantErr  bool
+		want     string
 	}{
 		{"https://example.org", false, false, "https://example.org"},
 		{"http://localhost:5173", false, true, ""},

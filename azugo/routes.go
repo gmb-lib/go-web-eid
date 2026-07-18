@@ -50,7 +50,12 @@ func (h *Handler) Bind(g azugo.Router) error {
 // @resource WebEID
 // @route /.well-known/jwks.json [get].
 func (h *Handler) jwks(ctx *azugo.Context) {
-	ctx.JSON(h.publishedKeys.JWKS())
+	doc, err := h.publishedKeys.JWKS()
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+	ctx.JSON(doc)
 }
 
 // challenge issues a fresh challenge nonce bound to the session.

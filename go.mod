@@ -1,6 +1,6 @@
 module github.com/gmb-lib/go-web-eid
 
-go 1.25.0
+go 1.26.5
 
 require (
 	azugo.io/azugo v0.34.3
