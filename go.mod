@@ -1,21 +1,21 @@
 module github.com/gmb-lib/go-web-eid
 
-go 1.25.0
+go 1.26.5
 
 require (
-	azugo.io/azugo v0.34.0
-	azugo.io/core v0.34.0
+	azugo.io/azugo v0.35.1
+	azugo.io/core v0.35.1
 	github.com/alicebob/miniredis/v2 v2.33.0
 	github.com/go-quicktest/qt v1.102.0
 	github.com/redis/go-redis/v9 v9.21.0
 	github.com/spf13/viper v1.21.0
-	github.com/valyala/fasthttp v1.71.0
+	github.com/valyala/fasthttp v1.72.0
 	golang.org/x/crypto v0.53.0
 )
 
 require (
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
-	github.com/andybalholm/brotli v1.2.1 // indirect
+	github.com/andybalholm/brotli v1.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -28,10 +28,10 @@ require (
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/klauspost/compress v1.19.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/lafriks/http2 v0.5.0 // indirect
+	github.com/lafriks/http2 v0.6.1 // indirect
 	github.com/lafriks/pkcs8 v1.2.3 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect

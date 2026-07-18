@@ -276,16 +276,26 @@ type JWKS struct {
 }
 
 // JWKS returns the set as a serialisable JWKS value.
-func (ks *KeySet) JWKS() JWKS {
+func (ks *KeySet) JWKS() (JWKS, error) {
 	out := JWKS{Keys: make([]JWK, 0, len(ks.keys))}
 	for kid, pub := range ks.keys {
-		out.Keys = append(out.Keys, jwkFromPublic(kid, pub))
+		jwk, err := jwkFromPublic(kid, pub)
+		if err != nil {
+			return JWKS{}, err
+		}
+		out.Keys = append(out.Keys, jwk)
 	}
-	return out
+	return out, nil
 }
 
 // MarshalJWKS serialises the set to JSON suitable for a JWKS endpoint.
-func (ks *KeySet) MarshalJWKS() ([]byte, error) { return json.Marshal(ks.JWKS()) }
+func (ks *KeySet) MarshalJWKS() ([]byte, error) {
+	doc, err := ks.JWKS()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(doc)
+}
 
 // KeySetFromJWKS parses a JWKS document into a verification key set, keeping
 // only EC P-256 keys.
@@ -316,17 +326,21 @@ func KeySetFromJWKS(data []byte) (*KeySet, error) {
 	return ks, nil
 }
 
-func jwkFromPublic(kid string, pub *ecdsa.PublicKey) JWK {
+func jwkFromPublic(kid string, pub *ecdsa.PublicKey) (JWK, error) {
+	// Bytes() returns the uncompressed point 0x04 || X || Y (each coordinate
+	// byteLen bytes) — the non-deprecated way to read the curve coordinates.
+	raw, err := pub.Bytes()
+	if err != nil {
+		return JWK{}, err
+	}
 	byteLen := (pub.Curve.Params().BitSize + 7) / 8
-	x := make([]byte, byteLen)
-	y := make([]byte, byteLen)
-	pub.X.FillBytes(x)
-	pub.Y.FillBytes(y)
+	x := raw[1 : 1+byteLen]
+	y := raw[1+byteLen:]
 	return JWK{
 		Kty: "EC", Crv: "P-256",
 		X: b64(x), Y: b64(y),
 		Kid: kid, Use: "sig", Alg: "ES256",
-	}
+	}, nil
 }
 
 // Verifier verifies identity assertions against a key set, issuer and audience.

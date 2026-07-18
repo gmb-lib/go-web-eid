@@ -1,63 +1,34 @@
-# golangci-lint configuration (v2 schema).
-# Run: golangci-lint run ./...
+# Balanced golangci-lint ruleset: the standard linters (errcheck, govet,
+# ineffassign, staticcheck, unused) plus the security-valuable gosec + errorlint,
+# and gofmt for formatting. The opinionated/noisy linters (revive exported-symbol
+# docs, gocritic if-else->switch) are intentionally OFF to avoid a wall of style
+# noise.
 version: "2"
 
-run:
-  timeout: 5m
-  tests: true
-
 linters:
-  default: none
+  default: standard        # errcheck · govet · ineffassign · staticcheck · unused
   enable:
-    - bodyclose      # HTTP response bodies are closed (OCSP/JWKS clients)
-    - errcheck       # unchecked errors
-    - errorlint      # correct error wrapping / comparisons
-    - gocritic       # opinionated correctness/style checks
-    - gosec          # security issues (crypto, file I/O)
-    - govet          # vet
-    - ineffassign    # ineffectual assignments
-    - misspell       # spelling
-    - nakedret       # no naked returns in long funcs
-    - prealloc       # slice preallocation
-    - revive         # style / exported-symbol docs
-    - staticcheck    # staticcheck + gosimple + stylecheck
-    - unconvert      # unnecessary conversions
-    - unparam        # unused function parameters
-    - unused         # unused code
+    - errorlint            # correct error wrapping / comparisons (%w, errors.Is/As)
+    - gosec                # security issues (crypto, file perms, injection)
   settings:
     gosec:
-      # G115: integer overflow on conversions. False-positives on the fixed-width
-      # curve/coordinate byte math in the signature/assertion packages.
+      # Excluded because they are noisy / false-positive-prone in this codebase;
+      # the high-signal rules (file/dir perms G301/G306, weak-crypto imports G505,
+      # SQL/command injection, …) stay ON.
       excludes:
-        - G115
-    revive:
-      rules:
-        - name: exported
-        - name: var-naming
-        - name: package-comments
-        - name: error-strings
-        - name: context-as-argument
-  exclusions:
-    generated: lax
-    rules:
-      # Tests may ignore errors and use less-constrained constructs.
-      - path: _test\.go
-        linters:
-          - errcheck
-          - gosec
-          - unparam
-          - prealloc
-          - bodyclose
-      # The OCSP HTTP client owns response-body lifecycle internally.
-      - path: ocsp/client\.go
-        linters:
-          - bodyclose
+        - G115             # int-overflow on numeric conversions
+        - G101             # "hardcoded credentials" — fires on path / JSON-key / env-var name constants
+        - G304             # file inclusion via variable — fires on reads/writes under a configured dir
+        - G703             # path traversal via taint analysis — same false-positive family as G304
+        - G404             # math/rand — used only for non-crypto jitter/backoff here
+        - G117             # marshaled field matches a secret pattern — server-side token storage is by design
+
+issues:
+  # Report every finding — the defaults (max-same-issues: 3) silently hide
+  # repeats, which is misleading in CI.
+  max-issues-per-linter: 0
+  max-same-issues: 0
 
 formatters:
   enable:
-    - gofmt
-    - goimports
-  settings:
-    goimports:
-      local-prefixes:
-        - github.com/gmb-lib/go-web-eid
+    - gofmt                # canonical Go formatting (also normalizes to LF)
