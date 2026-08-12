@@ -3,6 +3,7 @@ package webeid
 import (
 	"crypto/x509"
 	"encoding/asn1"
+	"errors"
 	"time"
 
 	"github.com/gmb-lib/go-web-eid/certificate"
@@ -16,6 +17,7 @@ type AuthTokenValidatorBuilder struct {
 	allowInsecureLocalhost bool
 
 	trustedCAs []*x509.Certificate
+	trustStore *certificate.TrustStore
 
 	ocspEnabled          bool
 	ocspClient           ocsp.Client
@@ -68,9 +70,18 @@ func (b *AuthTokenValidatorBuilder) WithAllowInsecureLocalhostOrigin() *AuthToke
 }
 
 // WithTrustedCertificateAuthorities sets the intermediate CA trust anchors
-// (required).
+// (required, unless a store is supplied with WithTrustStore).
 func (b *AuthTokenValidatorBuilder) WithTrustedCertificateAuthorities(cas ...*x509.Certificate) *AuthTokenValidatorBuilder {
 	b.trustedCAs = append(b.trustedCAs, cas...)
+	return b
+}
+
+// WithTrustStore supplies a ready trust store instead of a certificate list.
+// Use it to share one store between the validator and other components — a
+// runtime-reloadable store keeps every consumer on the same trusted set.
+// Mutually exclusive with WithTrustedCertificateAuthorities.
+func (b *AuthTokenValidatorBuilder) WithTrustStore(ts *certificate.TrustStore) *AuthTokenValidatorBuilder {
+	b.trustStore = ts
 	return b
 }
 
@@ -150,9 +161,15 @@ func (b *AuthTokenValidatorBuilder) Build() (AuthTokenValidator, error) {
 		}
 		normalizedOrigins = append(normalizedOrigins, n)
 	}
-	trust, err := certificate.NewTrustStore(b.trustedCAs...)
-	if err != nil {
-		return nil, err
+	trust := b.trustStore
+	if trust == nil {
+		var err error
+		trust, err = certificate.NewTrustStore(b.trustedCAs...)
+		if err != nil {
+			return nil, err
+		}
+	} else if len(b.trustedCAs) > 0 {
+		return nil, errors.New("webeid: use either WithTrustStore or WithTrustedCertificateAuthorities, not both")
 	}
 
 	v := &authTokenValidator{
