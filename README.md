@@ -73,6 +73,20 @@ signature algorithm (the double-hash described in the specification). ECDSA
 signatures are accepted in raw IEEE P1363 `r ‖ s` form, as emitted by the native
 application.
 
+### Runtime-reloadable trust
+
+The trusted-CA set can be replaced while requests are in flight. Build a
+`certificate.TrustStore` and share it between components (`WithTrustStore` on
+the validator builder, `signing.Options.Trust` on the signer); calling
+`Reload` swaps the whole set atomically — a check that already started
+finishes against the set it started with, and `Reload` refuses to empty a
+store. `certificate.NewRuntimeTrustStore` starts a store **empty** (every
+verification fails until the first `Reload`) for deployments where trust
+material is delivered at runtime, e.g. by a trust-list synchronizer. The
+Azugo handler exposes the same lifecycle as `Handler.ReloadTrust()` (re-read
+the configured path and apply it) plus the `WithRuntimeTrust()` construction
+option to allow starting on an empty or missing trust source.
+
 ## Quickstart — Azugo integration
 
 ```go

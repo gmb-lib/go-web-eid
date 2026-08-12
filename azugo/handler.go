@@ -22,6 +22,15 @@ type Handler struct {
 	store     webeid.ChallengeNonceStore
 	signer    *signing.Signer
 
+	// trust is the one trusted-CA store shared by the validator and the
+	// signer; ReloadTrust refreshes it in place so both always agree.
+	trust *certificate.TrustStore
+
+	// runtimeTrust (WithRuntimeTrust) lets construction succeed on an empty
+	// or missing trust directory: the store starts empty (every check fails)
+	// and is expected to be filled by ReloadTrust once material arrives.
+	runtimeTrust bool
+
 	// ocspTransport, when set (WithOCSPTransport), is the RoundTripper used for
 	// OCSP responder requests — e.g. an instrumented transport injected by the
 	// hosting service. Library stays dependency-pure: just a stdlib RoundTripper.
@@ -69,6 +78,18 @@ func WithPublishedJWKS(keys *assertion.KeySet) Option {
 	}
 }
 
+// WithRuntimeTrust lets the handler start with an empty or missing trusted-CA
+// source instead of failing construction. Every certificate check fails until
+// ReloadTrust loads material — use this only when something at runtime (e.g.
+// a trust-list synchronizer) delivers the trust directory's content and calls
+// ReloadTrust; a statically provisioned deployment should keep the default
+// fail-at-start behaviour so a misconfigured path is caught at boot.
+func WithRuntimeTrust() Option {
+	return func(h *Handler) {
+		h.runtimeTrust = true
+	}
+}
+
 // WithOCSPTransport injects a custom http.RoundTripper for OCSP responder
 // requests — e.g. an OpenTelemetry-instrumented transport supplied by the
 // hosting service so OCSP exchanges appear as client spans. Only used when OCSP
@@ -88,36 +109,44 @@ func New(cfg *Configuration, opts ...Option) (*Handler, error) {
 		return nil, errors.New("webeid: configuration is required")
 	}
 
-	cas, err := loadTrustedCAs(cfg.TrustedCACertsPath)
-	if err != nil {
-		return nil, err
-	}
-	trust, err := certificate.NewTrustStore(cas...)
-	if err != nil {
-		return nil, err
+	h := &Handler{config: cfg}
+	// Default in-process nonce store; overridable via WithNonceStore.
+	h.store = NewSessionStore(cfg)
+
+	// Apply options BEFORE loading trust material and building the
+	// validator/signer/OCSP checker so runtime-trust mode, a custom OCSP
+	// transport (WithOCSPTransport) and a store override are honoured.
+	for _, o := range opts {
+		o(h)
 	}
 
-	validator, err := buildValidator(cfg, cas)
+	// One shared trust store feeds both the validator and the signer, so a
+	// ReloadTrust refresh reaches every certificate check at once.
+	trust := certificate.NewRuntimeTrustStore()
+	cas, err := loadTrustedCAs(cfg.TrustedCACertsPath)
+	switch {
+	case err == nil:
+		if err := trust.Reload(cas...); err != nil {
+			return nil, err
+		}
+	case h.runtimeTrust && emptyTrustSource(err):
+		// Runtime-managed trust: start empty (every check fails) and wait
+		// for ReloadTrust. A statically provisioned deployment keeps the
+		// error below so a bad path is caught at boot.
+	default:
+		return nil, err
+	}
+	h.trust = trust
+
+	validator, err := buildValidator(cfg, trust)
 	if err != nil {
 		return nil, err
 	}
+	h.validator = validator
 
 	acceptedPolicies, err := certificate.ParseOIDs(cfg.SigningAcceptedPolicyOIDs)
 	if err != nil {
 		return nil, err
-	}
-
-	h := &Handler{
-		config:    cfg,
-		validator: validator,
-	}
-	// Default in-process nonce store; overridable via WithNonceStore.
-	h.store = NewSessionStore(cfg)
-
-	// Apply options BEFORE building the signer/OCSP checker so a custom OCSP
-	// transport (WithOCSPTransport) and store override are honoured.
-	for _, o := range opts {
-		o(h)
 	}
 
 	signerOpts := signing.Options{
@@ -156,11 +185,39 @@ func New(cfg *Configuration, opts ...Option) (*Handler, error) {
 	return h, nil
 }
 
-// buildValidator constructs the auth-token validator from configuration.
-func buildValidator(cfg *Configuration, cas []*x509.Certificate) (webeid.AuthTokenValidator, error) {
+// ReloadTrust re-reads the trusted CA material from the configured path and
+// replaces the set used by both authentication-token validation and
+// signing-certificate checks. Safe to call while requests are in flight — a
+// check that already started finishes against the set it started with. On
+// error the previous set stays in effect. Returns the number of certificates
+// now trusted.
+//
+// Call it whenever the trust source changes underneath a running handler,
+// e.g. after a trust-list synchronizer rewrites the trust directory.
+func (h *Handler) ReloadTrust() (int, error) {
+	cas, err := loadTrustedCAs(h.config.TrustedCACertsPath)
+	if err != nil {
+		return 0, err
+	}
+	if err := h.trust.Reload(cas...); err != nil {
+		return 0, err
+	}
+	return len(cas), nil
+}
+
+// emptyTrustSource reports whether loading trust material failed only because
+// there was nothing there yet: a missing path or a source without a single
+// certificate.
+func emptyTrustSource(err error) bool {
+	return errors.Is(err, os.ErrNotExist) || errors.Is(err, certificate.ErrNoCertificatesFound)
+}
+
+// buildValidator constructs the auth-token validator from configuration,
+// verifying against the shared trust store.
+func buildValidator(cfg *Configuration, trust *certificate.TrustStore) (webeid.AuthTokenValidator, error) {
 	b := webeid.NewAuthTokenValidatorBuilder().
 		WithSiteOrigins(cfg.Origins...).
-		WithTrustedCertificateAuthorities(cas...).
+		WithTrustStore(trust).
 		WithOcspRequestTimeout(cfg.OCSPRequestTimeout).
 		WithNonceDisabledOcspUrls(cfg.OCSPNonceDisabledURLs...).
 		WithAllowedOcspResponderURLs(cfg.OCSPAllowedResponderURLs...)
