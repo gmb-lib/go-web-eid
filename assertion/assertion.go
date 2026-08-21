@@ -317,13 +317,38 @@ func KeySetFromJWKS(data []byte) (*KeySet, error) {
 		if err != nil {
 			return nil, ErrInvalidToken
 		}
-		ks.Add(k.Kid, &ecdsa.PublicKey{
-			Curve: elliptic.P256(),
-			X:     new(big.Int).SetBytes(xb),
-			Y:     new(big.Int).SetBytes(yb),
-		})
+		pub, err := p256PublicKey(xb, yb)
+		if err != nil {
+			return nil, ErrInvalidToken
+		}
+		ks.Add(k.Kid, pub)
 	}
 	return ks, nil
+}
+
+// p256PublicKey builds a P-256 public key from a JWK's x/y coordinates.
+//
+// It parses the SEC 1 uncompressed encoding rather than assigning the raw
+// coordinates, so the point is checked to be on the curve: coordinates that do
+// not describe a real point are rejected here instead of becoming a key that
+// silently fails every verification later.
+//
+// A coordinate is left-padded to the field size. RFC 7518 requires a JWK to
+// encode the full 32 bytes including leading zeros, but producers that strip
+// them exist, and such a key was accepted before this — dropping it would be a
+// behaviour change, not a fix.
+func p256PublicKey(xb, yb []byte) (*ecdsa.PublicKey, error) {
+	if len(xb) > p256ByteLen || len(yb) > p256ByteLen {
+		return nil, ErrInvalidToken
+	}
+
+	// 0x04 || X || Y, each coordinate right-aligned in its own field-sized slot.
+	buf := make([]byte, 1+2*p256ByteLen)
+	buf[0] = 4
+	copy(buf[1+p256ByteLen-len(xb):], xb)
+	copy(buf[1+2*p256ByteLen-len(yb):], yb)
+
+	return ecdsa.ParseUncompressedPublicKey(elliptic.P256(), buf)
 }
 
 func jwkFromPublic(kid string, pub *ecdsa.PublicKey) (JWK, error) {
