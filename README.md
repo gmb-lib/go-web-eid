@@ -138,6 +138,14 @@ application.
 - Standard-library crypto only; no cgo.
 - HTTPS-only origin; the extension also enforces this client-side.
 
+## Contributing
+
+Bug reports and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) names the gate a
+change has to pass, what a change to this library needs, and the sign-off every commit carries.
+
+Suspected vulnerabilities go through the private route in [SECURITY.md](SECURITY.md) — never a
+public issue.
+
 ## License
 
 See [LICENSE](LICENSE).
