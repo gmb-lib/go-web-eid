@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,6 +34,17 @@ func testIDCodeEE() string {
 	dob := time.Date(1980, time.January, 8, 0, 0, 0, 0, time.UTC)
 
 	return fmt.Sprintf("%d%s%03d%d", centurySex, dob.Format("060102"), serial, check)
+}
+
+// testRegNoLV returns a Latvian organisation registration number in the NTR form
+// a certificate carries: the country and an eleven-digit number whose leading
+// group identifies the register. Assembled from its parts for the same reason as
+// testIDCodeLV, and with a visibly synthetic serial — the value this replaced was
+// shaped exactly like a real company's number, which is the whole problem.
+func testRegNoLV(digit int) string {
+	const register = "4000"
+
+	return "NTRLV-" + register + strings.Repeat(strconv.Itoa(digit), 7)
 }
 
 // testIDCodeLV returns a Latvian personal identity code in the PNO form a
@@ -105,7 +118,7 @@ func TestCheckSameNaturalPerson(t *testing.T) {
 	auth := testCert(t, person, nil)
 	signSame := testCert(t, person, nil)
 	signOther := testCert(t, other, nil)
-	orgSeal := testCert(t, "NTRLV-40003011203", nil)
+	orgSeal := testCert(t, testRegNoLV(0), nil)
 
 	checked, err := CheckSameNaturalPerson(auth, signSame)
 	if !checked || err != nil {
