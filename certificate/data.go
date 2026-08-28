@@ -16,7 +16,7 @@ var errSubjectFieldMissing = errors.New("certificate subject field is missing")
 var oidSurname = asn1.ObjectIdentifier{2, 5, 4, 4}
 
 // SubjectCN returns the certificate subject common name, e.g.
-// "JÕEORG,JAAK-KRISTJAN,38001085718".
+// "SURNAME,GIVEN-NAME,XXXXXXXXXXX".
 func SubjectCN(c *x509.Certificate) (string, error) {
 	if c.Subject.CommonName == "" {
 		return "", errSubjectFieldMissing
@@ -25,7 +25,7 @@ func SubjectCN(c *x509.Certificate) (string, error) {
 }
 
 // SubjectIDCode returns the subject serialNumber attribute, e.g.
-// "PNOEE-38001085718".
+// "PNOEE-XXXXXXXXXXX".
 func SubjectIDCode(c *x509.Certificate) (string, error) {
 	if c.Subject.SerialNumber == "" {
 		return "", errSubjectFieldMissing

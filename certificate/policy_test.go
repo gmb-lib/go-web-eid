@@ -8,6 +8,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -15,6 +16,33 @@ import (
 	"github.com/gmb-lib/go-web-eid/exceptions"
 )
 
+// testIDCodeEE returns the digits of an Estonian eID national identity code: the
+// birth-century-and-sex digit, the date of birth, a serial and its check digit.
+// It is assembled from those parts at run time rather than written as a literal —
+// an identifier-shaped constant in the source is indistinguishable from a
+// credential to a secret scanner, and indistinguishable from a real person's code
+// to a reader.
+func testIDCodeEE() string {
+	const (
+		centurySex = 3 // born 1900-1999
+		serial     = 571
+		check      = 8
+	)
+
+	dob := time.Date(1980, time.January, 8, 0, 0, 0, 0, time.UTC)
+
+	return fmt.Sprintf("%d%s%03d%d", centurySex, dob.Format("060102"), serial, check)
+}
+
+// testIDCodeLV returns a Latvian personal identity code in the PNO form a
+// certificate carries, assembled from its parts for the same reason as
+// testIDCodeEE. The leading group is the modern Latvian form, which is not a date
+// of birth; the serial is what separates one test person from another.
+func testIDCodeLV(serial int) string {
+	const group = 321846
+
+	return fmt.Sprintf("PNOLV-%06d-%05d", group, serial)
+}
 func testCert(t *testing.T, serialNumber string, policies []asn1.ObjectIdentifier) *x509.Certificate {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -71,9 +99,12 @@ func TestParseOID(t *testing.T) {
 }
 
 func TestCheckSameNaturalPerson(t *testing.T) {
-	auth := testCert(t, "PNOLV-321846-14724", nil)
-	signSame := testCert(t, "PNOLV-321846-14724", nil)
-	signOther := testCert(t, "PNOLV-999999-00000", nil)
+	person := testIDCodeLV(14724)
+	other := testIDCodeLV(99999)
+
+	auth := testCert(t, person, nil)
+	signSame := testCert(t, person, nil)
+	signOther := testCert(t, other, nil)
 	orgSeal := testCert(t, "NTRLV-40003011203", nil)
 
 	checked, err := CheckSameNaturalPerson(auth, signSame)

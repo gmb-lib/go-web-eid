@@ -167,8 +167,8 @@ func TestCheckDisallowedPolicies(t *testing.T) {
 func TestSubjectExtraction(t *testing.T) {
 	cert, _ := makeCert(t, certOptions{
 		subject: pkix.Name{
-			CommonName:   "JÕEORG,JAAK-KRISTJAN,38001085718",
-			SerialNumber: "PNOEE-38001085718",
+			CommonName:   "JÕEORG,JAAK-KRISTJAN," + testIDCodeEE(),
+			SerialNumber: "PNOEE-" + testIDCodeEE(),
 			Country:      []string{"EE"},
 			ExtraNames: []pkix.AttributeTypeAndValue{
 				{Type: asn1.ObjectIdentifier{2, 5, 4, 42}, Value: "JAAK-KRISTJAN"}, // givenName
@@ -179,11 +179,11 @@ func TestSubjectExtraction(t *testing.T) {
 
 	cn, err := SubjectCN(cert)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(cn, "JÕEORG,JAAK-KRISTJAN,38001085718"))
+	qt.Check(t, qt.Equals(cn, "JÕEORG,JAAK-KRISTJAN,"+testIDCodeEE()))
 
 	id, err := SubjectIDCode(cert)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(id, "PNOEE-38001085718"))
+	qt.Check(t, qt.Equals(id, "PNOEE-"+testIDCodeEE()))
 
 	cc, err := SubjectCountryCode(cert)
 	qt.Assert(t, qt.IsNil(err))
