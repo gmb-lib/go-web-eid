@@ -39,6 +39,9 @@ container and never sees document bytes.
 go get github.com/gmb-lib/go-web-eid
 ```
 
+See [`CHANGELOG.md`](./CHANGELOG.md) for what each release changed, and what it means for code that
+already uses this library, before you bump.
+
 ## Quickstart — authentication-token validation (core)
 
 ```go
