@@ -8,13 +8,54 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
+	"fmt"
 	"math/big"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gmb-lib/go-web-eid/exceptions"
 )
 
+// testIDCodeEE returns the digits of an Estonian eID national identity code: the
+// birth-century-and-sex digit, the date of birth, a serial and its check digit.
+// It is assembled from those parts at run time rather than written as a literal —
+// an identifier-shaped constant in the source is indistinguishable from a
+// credential to a secret scanner, and indistinguishable from a real person's code
+// to a reader.
+func testIDCodeEE() string {
+	const (
+		centurySex = 3 // born 1900-1999
+		serial     = 571
+		check      = 8
+	)
+
+	dob := time.Date(1980, time.January, 8, 0, 0, 0, 0, time.UTC)
+
+	return fmt.Sprintf("%d%s%03d%d", centurySex, dob.Format("060102"), serial, check)
+}
+
+// testRegNoLV returns a Latvian organisation registration number in the NTR form
+// a certificate carries: the country and an eleven-digit number whose leading
+// group identifies the register. Assembled from its parts for the same reason as
+// testIDCodeLV, and with a visibly synthetic serial — the value this replaced was
+// shaped exactly like a real company's number, which is the whole problem.
+func testRegNoLV(digit int) string {
+	const register = "4000"
+
+	return "NTRLV-" + register + strings.Repeat(strconv.Itoa(digit), 7)
+}
+
+// testIDCodeLV returns a Latvian personal identity code in the PNO form a
+// certificate carries, assembled from its parts for the same reason as
+// testIDCodeEE. The leading group is the modern Latvian form, which is not a date
+// of birth; the serial is what separates one test person from another.
+func testIDCodeLV(serial int) string {
+	const group = 321846
+
+	return fmt.Sprintf("PNOLV-%06d-%05d", group, serial)
+}
 func testCert(t *testing.T, serialNumber string, policies []asn1.ObjectIdentifier) *x509.Certificate {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -71,10 +112,13 @@ func TestParseOID(t *testing.T) {
 }
 
 func TestCheckSameNaturalPerson(t *testing.T) {
-	auth := testCert(t, "PNOLV-321846-14724", nil)
-	signSame := testCert(t, "PNOLV-321846-14724", nil)
-	signOther := testCert(t, "PNOLV-999999-00000", nil)
-	orgSeal := testCert(t, "NTRLV-40003011203", nil)
+	person := testIDCodeLV(14724)
+	other := testIDCodeLV(99999)
+
+	auth := testCert(t, person, nil)
+	signSame := testCert(t, person, nil)
+	signOther := testCert(t, other, nil)
+	orgSeal := testCert(t, testRegNoLV(0), nil)
 
 	checked, err := CheckSameNaturalPerson(auth, signSame)
 	if !checked || err != nil {

@@ -128,8 +128,8 @@ func CheckAcceptedPolicies(cert *x509.Certificate, accepted []asn1.ObjectIdentif
 }
 
 // naturalPersonIDPrefix is the ETSI EN 319 412-1 semantics identifier prefix
-// for natural-person serialNumber values (e.g. "PNOLV-321846-14724",
-// "PNOEE-38001085718").
+// for natural-person serialNumber values (e.g. "PNOLV-XXXXXX-XXXXX",
+// "PNOEE-XXXXXXXXXXX").
 const naturalPersonIDPrefix = "PNO"
 
 // CheckSameNaturalPerson asserts that two certificates belong to the same
