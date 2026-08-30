@@ -3,8 +3,8 @@ module github.com/gmb-lib/go-web-eid
 go 1.26.6
 
 require (
-	azugo.io/azugo v0.37.2
-	azugo.io/core v0.37.2
+	azugo.io/azugo v0.38.0
+	azugo.io/core v0.38.0
 	github.com/alicebob/miniredis/v2 v2.33.0
 	github.com/go-quicktest/qt v1.102.0
 	github.com/redis/go-redis/v9 v9.22.0
@@ -15,7 +15,7 @@ require (
 
 require (
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
-	github.com/andybalholm/brotli v1.2.2 // indirect
+	github.com/andybalholm/brotli v1.2.3 // indirect
 	github.com/cenkalti/backoff/v7 v7.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.4.2 // indirect
