@@ -4,6 +4,63 @@ Notable changes to this library, newest first. Versions are git tags; this file 
 for whoever bumps the dependency — what changed, and what it means for code that already
 uses it.
 
+## v0.15.4
+
+Dependency maintenance with one thing to act on: **this library now needs Go 1.27**. No source
+changed here, and every dependency that moved was checked against what this library actually
+uses — none of it reaches your code.
+
+### Changed
+
+- **The module declares `go 1.27.0`** (was `1.26.6`), so your own module has to be on Go 1.27
+  before it can build against this one. A dependency's `go` line does **not** make the go command
+  fetch a newer toolchain for you — measured both ways: a consumer whose own `go` directive is
+  lower stops with a `requires go >= 1.27.0 (running go 1.26.6)` error, and it stops there with
+  `GOTOOLCHAIN` on its `auto` default just as it does under `local`. Raise your own `go` directive
+  to `1.27.0` first; from there the go command downloads and uses the 1.27 toolchain by itself.
+  CI that reads `go-version-file: go.mod` follows the bump with no workflow edit — a workflow
+  naming a Go version in the YAML needs that line changed.
+
+### Notes
+
+- **`golang.org/x/crypto` → v0.57.0** (was v0.55.0). This library uses exactly one package from it,
+  `x/crypto/ocsp`, and that package is **byte-identical** between the two versions (compared file by
+  file in the module cache). Nothing about how an OCSP response is parsed or checked changes.
+
+- **`azugo.io/azugo` and `azugo.io/core` → v0.38.1** (was v0.38.0). Between those two releases
+  `azugo` changes one file, `middleware/metrics.go`, and `core` changes one, `cache/options.go` —
+  and that one only drops a lint directive. This library has no metrics code and imports only
+  `core/validation`, so neither touches it. The metrics change is real but arrives in a service
+  through whatever binds azugo's metrics configuration, not through here: from azugo v0.38.1 the
+  metrics endpoint stops negotiating OpenMetrics and always answers
+  `text/plain; version=0.0.4; charset=utf-8` with no `# EOF` terminator. **Check your scrape
+  configuration before you deploy** if it demands the OpenMetrics content type.
+
+- **`github.com/valyala/fasthttp` → v1.74.0** (was v1.73.0), which swaps the brotli implementation
+  underneath: `github.com/andybalholm/brotli` leaves the dependency graph and
+  `github.com/molecule-man/go-brrr` v1.1.0 takes its place. This library touches fasthttp only in
+  the azugo session handling and compresses nothing. Also moved indirectly:
+  `go-playground/validator/v10` → v10.30.4, `klauspost/compress` → v1.20.0, `golang.org/x/sys` →
+  v0.48.0, `golang.org/x/text` → v0.42.0.
+
+- The wider fasthttp and x/crypto releases change a great many files upstream. What is written
+  above is what was read and measured against *this* library — not a review of those releases.
+
+- The gate is green on the new set: `go mod verify`, `go mod tidy -diff`, build, vet, `gofmt`, and
+  `go test -race` across all nine packages with **0 races**; `govulncheck` reports nothing this
+  library calls.
+
+## v0.15.3
+
+Repository housekeeping only. No library code changed, so a bump from v0.15.2 asks nothing of you.
+*(Written after the fact — the tag went out without an entry.)*
+
+### Notes
+
+- The repository gained a code of conduct, and the advisory DCO workflow was removed now that the
+  sign-off is enforced by the organisation's app together with a branch ruleset. What a
+  contribution has to carry is unchanged.
+
 ## v0.15.2
 
 ### Changed
