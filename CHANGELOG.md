@@ -4,6 +4,44 @@ Notable changes to this library, newest first. Versions are git tags; this file 
 for whoever bumps the dependency — what changed, and what it means for code that already
 uses it.
 
+## v0.15.5
+
+A security and dependency release with two things to act on: **this library now needs Go 1.27.2**,
+and it **requires azugo v0.40.0**, which your service inherits when it takes this version. Nothing
+this library does behaves differently.
+
+### Changed
+
+- **The module declares `go 1.27.2`** (was `1.27.0`). Go 1.27.2 fixes standard-library
+  vulnerabilities that this library's code reaches under 1.27.0. `govulncheck` found eight it calls
+  before the move and none after it: GO-2026-6603, -6605, -6607, -6608, -6610, -6611, -6613 and
+  -6617, in `net/http`, `crypto/tls`, `net/textproto` and `mime/multipart`. Raise your own module's
+  `go` directive to `1.27.2`; from there the go command downloads and uses that toolchain by itself.
+  CI that reads `go-version-file: go.mod` follows with no workflow edit.
+
+- **`azugo.io/azugo` and `azugo.io/core` → v0.40.0** (were v0.38.1). The one azugo change near this
+  library is cookie handling: azugo's cookie helpers now resolve `__Host-` and `__Secure-` variants
+  by their bare name. The pre-auth session cookie here is read and written through fasthttp
+  directly, not through those helpers, so its name and attributes are exactly what they were. What
+  azugo v0.40.0 changes for a service (a redirect after a non-GET request answers `303`, a wider
+  cache interface, outbound calls that stop at the request deadline, one more cache at start) is
+  listed in the `go-platform-kit` v1.11.4 notes and arrives with azugo, not through this library.
+
+### Notes
+
+- **`golang.org/x/crypto` → v0.58.0** (was v0.57.0). This library uses exactly one package from it,
+  `x/crypto/ocsp`, and that package is **byte-identical** between the two versions (compared in the
+  module cache). Nothing about how an OCSP response is parsed or checked changes.
+
+- **Also moved:** `fasthttp` → **v1.75.0**; `go-redis` → **v9.23.0** and `miniredis` → **v2.40.0**,
+  both used only by the tests; and indirect modules including `go-brrr` → v1.2.0,
+  `validator/v10` → v10.30.5, `golang.org/x/sys` → v0.49.0 and `golang.org/x/text` → v0.43.0. CI's
+  pinned GitHub Actions moved to their current commits.
+
+- The gate is green on Go 1.27.2: `go mod verify`, `go mod tidy -diff`, build, vet, `gofmt`,
+  golangci-lint v2.14.0, and `go test -race` across all nine packages with **0 races**;
+  `govulncheck` reports nothing this library calls.
+
 ## v0.15.4
 
 Dependency maintenance with one thing to act on: **this library now needs Go 1.27**. No source
