@@ -38,6 +38,9 @@ this library does behaves differently.
   `validator/v10` → v10.30.5, `golang.org/x/sys` → v0.49.0 and `golang.org/x/text` → v0.43.0. CI's
   pinned GitHub Actions moved to their current commits.
 
+- **CI's linter moved to golangci-lint v2.14.0** (was v2.13.1). The earlier release cannot read Go 1.27.2's
+  compiled standard library and stops before linting anything. No code changed with it.
+
 - The gate is green on Go 1.27.2: `go mod verify`, `go mod tidy -diff`, build, vet, `gofmt`,
   golangci-lint v2.14.0, and `go test -race` across all nine packages with **0 races**;
   `govulncheck` reports nothing this library calls.
