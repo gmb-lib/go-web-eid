@@ -4,6 +4,14 @@ Notable changes to this library, newest first. Versions are git tags; this file 
 for whoever bumps the dependency — what changed, and what it means for code that already
 uses it.
 
+## v0.15.6
+
+Dependency maintenance. The module now requires Go 1.27.3 (was 1.27.2); CI follows the version
+in `go.mod`.
+
+- Updated Azugo to v0.40.2, Azugo Core to v0.40.1, fasthttp to v1.77.0, and `golang.org/x/net`
+  to v0.61.0, with the remaining dependency graph refreshed.
+
 ## v0.15.5
 
 A security and dependency release with two things to act on: **this library now needs Go 1.27.2**,
